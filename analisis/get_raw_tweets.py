@@ -7,8 +7,8 @@ import multiprocessing as mult
 maxtweets_per_trial = 5000
 
 def batch1():
-    ini_date = date(2022,1,27)
-    for game in range(222, 277):
+    ini_date = date(2022,3,9)
+    for game in range(263, 277):
         tweets_list2 = []
         for trials in range(1,7):
             for i,tweet in enumerate(sntwitter.TwitterSearchScraper('"Wordle '+str(game)+' '+str(trials)+'/6"'
@@ -28,8 +28,8 @@ def batch1():
         tweets_df2.to_csv('../scraping_raw/' + str(game) + '.csv')
 
 def batch2():
-    ini_date = date(2022,4,17)
-    for game in range(302, 358):
+    ini_date = date(2022,6,9)
+    for game in range(355, 358):
         tweets_list2 = []
         for trials in range(1,7):
             for i,tweet in enumerate(sntwitter.TwitterSearchScraper('"Wordle '+str(game)+' '+str(trials)+'/6"'

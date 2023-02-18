@@ -1,0 +1,28 @@
+Pese a esto, su similitud con otros juegos de puzzles y su gran popularidad han hecho posible la existencia de varias fuentes
+que podremos utilizar como base de nuestro proyecto.
+
+\section{Mastermind}
+
+Uno de los puzzles que inspiraron la creación de Wordle es Mastermind, este juego se basa en intentar averiguar un código oculto compuesto una secuencia de cuatro
+fichas de seis posibles colores donde el orden importa y se permiten repetir los colores. Este código es propuesto por el "codificador" (uno de los dos jugadores) y la
+labor del "decodificador" es intentar averiguar este código mediante propuestas que se van refinando gracias a las pistas que el codificador ofrece tras cada intento. 
+Las pistas que se facilitan al "decodificador" se rigen por las siguientes normas.
+\begin{enumerate}
+  \item Se devuelve una ficha de color negro por cada ficha de la combinación introducida que coincida en posición y color con la combinación oculta.
+  \item Se devuelve una ficha blanca por cada ficha de la combinación introducida cuyo color aparezca en la combinación oculta pero no se encuentre en la posición correcta.
+  \item Si la combinación introducida contiene fichas del mismo color solo se otorgarán tantas fichas como fichas de ese color aparezcan en la combinación oculta.
+  Las fichas sobrantes en la combinación introducida no pueden provocar la entrega de ninguna ficha.
+\end{enumerate}
+
+El "decodificador" tiene hasta doce intentos para averiguar la combinación, el juego termina cuando el "codificador" entrega cuatro fichas negras o cuando se alcanza el límite 
+de intentos. Podemos observar claras similitudes entre Wordle y Mastermind, especialmente a nivel de jugabilidad ya que ambos juegos se basan en adivinar una combinación de caracteres
+ocultos y en cada intento se reciben pistas. Además, el formato de las pistas es prácticamente idéntico salvo por el formato de los colores y que la ausencia de ficha en Mastermind se 
+traduce en devolver un cuadrado gris en Wordle. Pese a todo esto, creemos que es importante presentar las diferencias más relevantes entre cada juego:
+
+\begin{enumerate}
+  \item En Mastermind solo se indica el número de fichas en la posición correcta, en Wordle se indica además cuales son.
+  \item En Mastermind las códigos continen seis colores distintos y poseen 4 posiciones, en Wordle los códigos contienen veintiséis letras distintas y poseen 5 posiciones.
+  \item En Mastermind todas las combinaciones de colores son validas tanto como código objetivo como código introducido, en Wordle solo se permite utilizar palabras
+  del idioma inglés pertenecientes a una lista fijada por el desarrollador.
+  \item Mastermind permite hasta doce intentos, Wordle permite únicamente seis.
+\end{enumerate}

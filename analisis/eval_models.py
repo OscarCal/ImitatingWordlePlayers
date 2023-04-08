@@ -3,6 +3,103 @@ from string import ascii_lowercase
 import numpy as np
 from itertools import permutations
 import multiprocessing as mult
+import eval_models as evalmod
+
+valid_inputs = []
+with open("valid-wordle-words.txt") as f:
+    valid_inputs = f.read().splitlines()
+comparer = set(valid_inputs)
+valid_mutations = {}
+alphabet = list(map(chr, range(97, 123)))
+for word in valid_inputs:
+    valid_mutations[word] = set()
+    for i in range(len(word)):
+        for letter in alphabet:
+            if (letter != word[i]) and ((word[:i] + letter + word[i+1:]) in comparer):
+                valid_mutations[word].add(word[:i] + letter + word[i+1:])
+
+valid_inputs = []
+with open("valid-wordle-words.txt") as f:
+    valid_inputs = f.read().splitlines()
+comparer = set(valid_inputs)
+valid_permutations = {}
+changes = [[i,j] for i in range(5) for j in range(i+1,5)]
+for word in valid_inputs:
+    valid_permutations[word] = set()
+    for i,j in changes:
+        swap = list(word)
+        swap[i], swap[j] = swap[j], swap[i]
+        swap = ''.join(swap)
+        if swap != word and swap in comparer:
+            valid_permutations[word].add(swap)               
+
+valid_inputs = []
+with open("valid-wordle-words.txt") as f:
+    valid_inputs = f.read().splitlines()
+comparer = set(valid_inputs)
+valid_inversions = {}
+inversions = [[i,j]for i in range(4) for j in range(i+1,5)]
+for word in valid_inputs:
+    valid_inversions[word] = set()
+    for i,j in inversions:
+        inv = list(word)
+        inv[i:j+1] = reversed(word[i:j+1])
+        inv = ''.join(inv)
+        if inv != word and inv in comparer:
+            valid_inversions[word].add(inv)
+alphabet = np.asarray(list(map(chr, range(97, 123))))
+def get_keys(alphabet, length):
+    if len(alphabet) == 1:
+        return np.asarray([alphabet[0]*length])
+    elif length == 1:
+        return alphabet
+    else:
+        res = np.asarray([])
+        for i in range(len(alphabet)):
+            aux = np.asarray(get_keys(alphabet[i:], length - 1))
+            res = np.concatenate((res,np.char.add(np.asarray([alphabet[i]]*len(aux)), 
+                                         aux)), axis = 0)
+        return res
+def get_words(key):
+    res = set()
+    p = permutations(key)
+    for word in list(p):
+        aux = ''.join(word)
+        if aux in comparer:
+            res.add(aux)
+    return res
+
+
+keys = get_keys(alphabet, 5)
+words_from_letters = {key : get_words(key) for key in keys}
+
+frecs_new = np.load('adjusted_word_frequency_per_cluster.npy', allow_pickle = True)
+frec0_new = frecs_new[0]
+frec1_new = frecs_new[1]
+frec2_new = frecs_new[2]
+
+frecs = np.load('new_word_frequency_per_cluster.npy', allow_pickle = True)
+frec0 = frecs[0]
+g0_sorted = sorted(frec0.items(), key=lambda x:x[1], reverse = True)
+g0_top = g0_sorted[:30]
+g0_top = np.asarray(g0_top)
+top_vals = g0_top[:,1].astype(float)
+top_vals = top_vals/top_vals.sum()
+top_labels = g0_top[:,0]
+
+#dictionary of games and target words
+game_dict = {}
+with open("wordle-words-by-day2.txt") as f:
+    for line in f:
+        line = line.strip()
+        game_dict.update({int(line[0:3]) : line[4::]})
+daily_words = list(game_dict.values())
+
+from random import choice, sample, randrange, random, shuffle
+from string import ascii_lowercase
+import numpy as np
+from itertools import permutations
+import multiprocessing as mult
 
 def find(s, ch):
     return [i for i, ltr in enumerate(s) if ltr == ch]
@@ -217,9 +314,9 @@ def wordle_genetic(game_state, guess_count, pop_size, dict_frec, max_gen, tour_s
     return best_word, dict_frec
 
 
-def tryout(target, frecs, crossover_prob = 0.5,  mutate_prob = 0.03, permute_prob = 0.03, invert_prob = 0.02):
+def tryout(target, num, frecs, frecs_new, crossover_prob = 0.5,  mutate_prob = 0.03, permute_prob = 0.03, invert_prob = 0.02, pop_size = 150):
     #Prep sets
-    frec0 = frecs[0]
+    frec0 = frecs[num]
     dict_frec = frec0
     g0_sorted = sorted(frec0.items(), key=lambda x:x[1], reverse = True)
     g0_top = g0_sorted[:10]
@@ -228,12 +325,12 @@ def tryout(target, frecs, crossover_prob = 0.5,  mutate_prob = 0.03, permute_pro
     top_vals = top_vals/top_vals.sum()
     top_labels = g0_top[:,0]
     game_state = []
-    dict_frec = frec0_new
+    dict_frec = frecs_new[num]
     frecs = np.asarray(list(dict_frec.values()))
     frecs = (frecs + abs(min(frecs)))
     frecs = frecs/frecs.sum()
     dict_frec = dict(zip(dict_frec.keys(), frecs))
-    word, dict_frec = wordle_genetic(game_state = game_state, guess_count = 0, pop_size = 150, 
+    word, dict_frec = wordle_genetic(game_state = game_state, guess_count = 0, pop_size = pop_size, 
                                          dict_frec = dict_frec, max_gen = 100, tour_size = 40,
                                         crossover_prob = crossover_prob,  mutate_prob = mutate_prob, 
                                         permute_prob = permute_prob, invert_prob = invert_prob,
@@ -257,3 +354,131 @@ def tryout(target, frecs, crossover_prob = 0.5,  mutate_prob = 0.03, permute_pro
     #else:
     #    print("Ended with a loss")
     return game_state
+
+
+
+def batch0_0():
+    for crossover in np.arange(0.5,1.1,0.1):
+        for mutate in np.arange(0.01,0.06,0.01):
+            for permutation in np.arange(0.01,0.11,0.01):
+                for invert in np.arange(0.01,0.11,0.01):
+                    for pop_size in range(50,250,50):
+                        results = []
+                        try_words = np.random.choice(a = daily_words, size = 100 , replace = False)
+                        for word in try_words:
+                            results.append(tryout(word, 0, frecs, frecs_new, crossover_prob = crossover,  
+                                                    mutate_prob = mutate, permute_prob = permutation, 
+                                                    invert_prob = invert, pop_size = pop_size))
+                        aux = np.asarray(results)
+                        try_words = np.asarray(try_words)
+                        np.save(f"../hyperparam/m0c{int(crossover*10)}m{int(mutate*100)}p{int(permutation*100)}i{int(invert*100)}p{pop_size}.npy", aux)
+                        np.save(f"../hyperparam/m0c{int(crossover*10)}m{int(mutate*100)}p{int(permutation*100)}i{int(invert*100)}p{pop_size}words.npy", try_words)
+
+def batch0_1():
+    for crossover in np.arange(0.5,1.1,0.1):
+        for mutate in np.arange(0.06,0.11,0.01):
+            for permutation in np.arange(0.01,0.11,0.01):
+                for invert in np.arange(0.01,0.11,0.01):
+                    for pop_size in range(50,250,50):
+                        results = []
+                        try_words = np.random.choice(a = daily_words, size = 100 , replace = False)
+                        for word in try_words:
+                            results.append(tryout(word, 0, frecs, frecs_new, crossover_prob = crossover,  
+                                                    mutate_prob = mutate, permute_prob = permutation, 
+                                                    invert_prob = invert, pop_size = pop_size))
+                        aux = np.asarray(results)
+                        try_words = np.asarray(try_words)
+                        np.save(f"../hyperparam/m0c{int(crossover*10)}m{int(mutate*100)}p{int(permutation*100)}i{int(invert*100)}p{pop_size}.npy", aux)
+                        np.save(f"../hyperparam/m0c{int(crossover*10)}m{int(mutate*100)}p{int(permutation*100)}i{int(invert*100)}p{pop_size}words.npy", try_words)
+
+def batch1_0():
+    for crossover in np.arange(0.5,1.1,0.1):
+        for mutate in np.arange(0.01,0.06,0.01):
+            for permutation in np.arange(0.01,0.11,0.01):
+                for invert in np.arange(0.01,0.11,0.01):
+                    for pop_size in range(50,250,50):
+                        results = []
+                        try_words = np.random.choice(a = daily_words, size = 100 , replace = False)
+                        for word in try_words:
+                            results.append(tryout(word, 1, frecs, frecs_new, crossover_prob = crossover,  
+                                                    mutate_prob = mutate, permute_prob = permutation, 
+                                                    invert_prob = invert, pop_size = pop_size))
+                        aux = np.asarray(results)
+                        try_words = np.asarray(try_words)
+                        np.save(f"../hyperparam/m1c{int(crossover*10)}m{int(mutate*100)}p{int(permutation*100)}i{int(invert*100)}p{pop_size}.npy", aux)
+                        np.save(f"../hyperparam/m1c{int(crossover*10)}m{int(mutate*100)}p{int(permutation*100)}i{int(invert*100)}p{pop_size}words.npy", try_words)
+
+def batch2_0():
+    for crossover in np.arange(0.5,1.1,0.1):
+        for mutate in np.arange(0.01,0.06,0.01):
+            for permutation in np.arange(0.01,0.11,0.01):
+                for invert in np.arange(0.01,0.11,0.01):
+                    for pop_size in range(50,250,50):
+                        results = []
+                        try_words = np.random.choice(a = daily_words, size = 100 , replace = False)
+                        for word in try_words:
+                            results.append(tryout(word, 2, frecs, frecs_new, crossover_prob = crossover,  
+                                                    mutate_prob = mutate, permute_prob = permutation, 
+                                                    invert_prob = invert, pop_size = pop_size))
+                        aux = np.asarray(results)
+                        try_words = np.asarray(try_words)
+                        np.save(f"../hyperparam/m2c{int(crossover*10)}m{int(mutate*100)}p{int(permutation*100)}i{int(invert*100)}p{pop_size}.npy", aux)
+                        np.save(f"../hyperparam/m2c{int(crossover*10)}m{int(mutate*100)}p{int(permutation*100)}i{int(invert*100)}p{pop_size}words.npy", try_words)
+
+
+def batch1_1():
+    for crossover in np.arange(0.5,1.1,0.1):
+        for mutate in np.arange(0.06,0.11,0.01):
+            for permutation in np.arange(0.01,0.11,0.01):
+                for invert in np.arange(0.01,0.11,0.01):
+                    for pop_size in range(50,250,50):
+                        results = []
+                        try_words = np.random.choice(a = daily_words, size = 100 , replace = False)
+                        for word in try_words:
+                            results.append(tryout(word, 1, frecs, frecs_new, crossover_prob = crossover,  
+                                                    mutate_prob = mutate, permute_prob = permutation, 
+                                                    invert_prob = invert, pop_size = pop_size))
+                        aux = np.asarray(results)
+                        try_words = np.asarray(try_words)
+                        np.save(f"../hyperparam/m1c{int(crossover*10)}m{int(mutate*100)}p{int(permutation*100)}i{int(invert*100)}p{pop_size}.npy", aux)
+                        np.save(f"../hyperparam/m1c{int(crossover*10)}m{int(mutate*100)}p{int(permutation*100)}i{int(invert*100)}p{pop_size}words.npy", try_words)
+
+def batch2_1():
+    for crossover in np.arange(0.5,1.1,0.1):
+        for mutate in np.arange(0.06,0.11,0.01):
+            for permutation in np.arange(0.01,0.11,0.01):
+                for invert in np.arange(0.01,0.11,0.01):
+                    for pop_size in range(50,250,50):
+                        results = []
+                        try_words = np.random.choice(a = daily_words, size = 100 , replace = False)
+                        for word in try_words:
+                            results.append(tryout(word, 2, frecs, frecs_new, crossover_prob = crossover,  
+                                                    mutate_prob = mutate, permute_prob = permutation, 
+                                                    invert_prob = invert, pop_size = pop_size))
+                        aux = np.asarray(results)
+                        try_words = np.asarray(try_words)
+                        np.save(f"../hyperparam/m2c{int(crossover*10)}m{int(mutate*100)}p{int(permutation*100)}i{int(invert*100)}p{pop_size}.npy", aux)
+                        np.save(f"../hyperparam/m2c{int(crossover*10)}m{int(mutate*100)}p{int(permutation*100)}i{int(invert*100)}p{pop_size}words.npy", try_words)
+
+
+p0 = mult.Process(target = batch0_0)
+p1 = mult.Process(target = batch0_1)
+p2 = mult.Process(target = batch1_0)
+p3 = mult.Process(target = batch1_1)
+p4 = mult.Process(target = batch2_0)
+p5 = mult.Process(target = batch2_1)
+
+
+if __name__ == '__main__':
+    p0.start()
+    p1.start()
+    p2.start()
+    p3.start()
+    p4.start()
+    p5.start()
+    p0.join()
+    p1.join()
+    p2.join()
+    p3.join()
+    p4.join()
+    p5.join()

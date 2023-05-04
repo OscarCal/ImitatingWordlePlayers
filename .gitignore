@@ -2,3 +2,4 @@
 analisis/data_proc_ver_1.feather
 analisis/data_proc_ver_2.feather
 *.feather
+analisis/wordle_games.csv
